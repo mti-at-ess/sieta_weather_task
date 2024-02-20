@@ -9,6 +9,9 @@ import pandas as pd
 # Fixture providing sample weather data.
 @pytest.fixture
 def weather_data():
+    """
+    Fixture providing sample weather data.
+    """
     return {
         "event_start": [
             "2020-11-01 00:00:00+00",
@@ -46,9 +49,33 @@ def weather_data():
             11.5,
             11.47,
         ],
-        "sensor": ["temperature"] * 10,
-        "unit": ["°C"] * 10,
+        "sensor": [
+            "temperature",
+            "temperature",
+            "temperature",
+            "temperature",
+            "temperature",
+            "temperature",
+            "irradiance",
+            "irradiance",
+            "wind_speed",
+            "wind_speed"
+        ],
+        "unit": [
+            "°C",
+            "°C",
+            "°C",
+            "°C",
+            "°C",
+            "°C",
+            "W/m^2",
+            "W/m^2",
+            "m/s",
+            "m/s"
+        ],
     }
+
+# You can use this fixture in your tests to generate sample weather data.
 
 
 # Fixture providing sample weather data for tomorrow.
@@ -81,7 +108,7 @@ class TestWeatherViewSet:
         )
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json()["results"][0]["event_value"] == 11.36
+        assert response.json()["temperature"]["event_value"] == 11.36
 
     # Test for getting forecast for tomorrow.
     @patch("weather.views.pd.read_csv")

@@ -4,6 +4,7 @@ from django.http import JsonResponse
 from rest_framework.viewsets import GenericViewSet
 import pandas as pd
 from sieta_weather_task import settings
+from .utils import get_segregated_data, sort_dataframes_by_belief_fetch_last
 
 
 class WeatherViewSet(GenericViewSet):
@@ -41,35 +42,25 @@ class WeatherViewSet(GenericViewSet):
         relevant_data = dataset[
             (pd.to_datetime(dataset["event_start"]) >= now)
             & (pd.to_datetime(dataset["event_start"]) <= then)
-            ]
-        temperature_df = relevant_data.loc[
-            relevant_data["sensor"].str.contains("temperature")
         ]
-        irradiance_df = relevant_data.loc[
-            relevant_data["sensor"].str.contains("irradiance")
-        ]
-        wind_speed_df = relevant_data.loc[
-            relevant_data["sensor"].str.contains("wind_speed")
-        ]
+
+        # Segregate the data of dataframe into separate sources one.
+        temperature_df, irradiance_df, wind_speed_df = get_segregated_data(
+            relevant_data
+        )
 
         # Sort relevant data by 'belief_horizon_in_sec'
-        sorted_temperature_df = temperature_df.sort_values(
-            by="belief_horizon_in_sec", key=pd.to_datetime, ascending=True
-        )
-        sorted_irradiance_df = irradiance_df.sort_values(
-            by="belief_horizon_in_sec", key=pd.to_datetime, ascending=True
-        )
-        sorted_wind_speed_df = wind_speed_df.sort_values(
-            by="belief_horizon_in_sec", key=pd.to_datetime, ascending=True
-        )
-
-        # Get the top 3 forecasts
-        temperature_forecast = sorted_temperature_df.head(1).to_dict("records")
-        irradiance_forecast = sorted_irradiance_df.head(1).to_dict("records")
-        wind_speed_forecast = sorted_wind_speed_df.head(1).to_dict("records")
+        temperature_forecast = sort_dataframes_by_belief_fetch_last(temperature_df)
+        irradiance_forecast = sort_dataframes_by_belief_fetch_last(irradiance_df)
+        wind_speed_forecast = sort_dataframes_by_belief_fetch_last(wind_speed_df)
 
         return JsonResponse(
-            {"temperature": temperature_forecast, "irradiance": irradiance_forecast, "wind_speed": wind_speed_forecast})
+            {
+                "temperature": temperature_forecast[0] if temperature_forecast else None,
+                "irradiance": irradiance_forecast[0] if irradiance_forecast else None,
+                "wind_speed": wind_speed_forecast[0] if wind_speed_forecast else None,
+            }
+        )
 
     def get_tomorrow_forecast(request):
         """
@@ -96,21 +87,16 @@ class WeatherViewSet(GenericViewSet):
         # Extract data for tomorrow
         tomorrow_data = dataset[
             (
-                    pd.to_datetime(dataset["event_start"]).dt.date
-                    == (now + timedelta(days=1)).date()
+                pd.to_datetime(dataset["event_start"]).dt.date
+                == (now + timedelta(days=1)).date()
             )
         ]
 
         # Separate data for temperature, irradiance, and wind_speed sensors
-        temperature_df = tomorrow_data.loc[
-            tomorrow_data["sensor"].str.contains("temperature")
-        ]
-        irradiance_df = tomorrow_data.loc[
-            tomorrow_data["sensor"].str.contains("irradiance")
-        ]
-        wind_speed_df = tomorrow_data.loc[
-            tomorrow_data["sensor"].str.contains("wind_speed")
-        ]
+
+        temperature_df, irradiance_df, wind_speed_df = get_segregated_data(
+            tomorrow_data
+        )
 
         # Check if it's warm, sunny, and windy based on threshold values
         is_warm = any(
