@@ -88,7 +88,7 @@ def tomorrow_weather_data():
         "sensor": ["temperature", "irradiance"],
         "unit": [
             "°C",
-            None,  # Since unit is not specified for irradiance in the provided format
+            "W/m^2",  # Since unit is not specified for irradiance in the provided format
         ],
     }
 
